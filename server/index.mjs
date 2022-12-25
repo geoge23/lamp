@@ -1,5 +1,6 @@
 import express from "express"
 import { model, connect, Error } from 'mongoose'
+import {resolve} from 'path'
 
 connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 
@@ -30,6 +31,10 @@ const Lamp = model('Lamp', {
 
 const app = express()
 app.use(express.json())
+
+app.get('/', (req, res) => {
+    res.sendFile(resolve() + '/server/index.html')
+})
 
 app.get('/state', async (req, res) => {
     const { mac } = req.query

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+    <title>Lamp Controls</title>
+</head>
+
+<body>
+    <main class="container">
+        <hgroup>
+            <h1>Lamp Controls</h1>
+            <h2>A George Parks Project | <a href="https://github.com/geoge23/lamp">https://github.com/geoge23/lamp</a>
+            </h2>
+        </hgroup>
+        <hgroup>
+            <h3>Your buddy's lamp</h3>
+            <label for="buddy-color">
+                Buddy's color
+                <input type="color" id="buddy-color" name="buddy-color" placeholder="Last name" required>
+            </label>
+            <label for="buddy-message">
+                Buddy's message
+                <input type="text" id="buddy-message" name="buddy-message" placeholder="Good morning!" required>
+            </label>
+            <button type="submit" id="buddy-sync">Sync</button>
+            <button type="submit" id="buddy-nudge" class="secondary">Nudge</button>
+        </hgroup>
+        <hgroup>
+            <h3>Your lamp</h3>
+            <label for="you-color">
+                Your color
+                <input type="color" id="you-color" name="you-color" placeholder="Last name" required>
+            </label>
+            <button type="submit" id="you-sync">Sync</button>
+        </hgroup>
+    </main>
+</body>
+<script>
+    const buddyColor = document.getElementById('buddy-color');
+    const buddyMessage = document.getElementById('buddy-message');
+    const buddySync = document.getElementById('buddy-sync');
+    const youColor = document.getElementById('you-color');
+    const youSync = document.getElementById('you-sync');
+    const buddyNudge = document.getElementById('buddy-nudge');
+
+    const params = new URLSearchParams(location.search);
+    const mac = params.get('mac');
+    let yourMessage = ""
+    let buddyMac = ""
+
+    fetch(`/state?mac=${mac}`)
+        .then(res => res.json())
+        .then(data => {
+            youColor.value = rgbArrayToHex(data.color);
+
+            yourMessage = data.message;
+            buddyMac = data.bindedMac;
+            fetch(`state?mac=${data.bindedMac}`)
+                .then(res => res.json())
+                .then(q => {
+                    buddyColor.value = rgbArrayToHex(q.color);
+                    buddyMessage.value = q.message;
+                });
+        });
+
+    function rgbArrayToHex(rgb) {
+        return '#' + rgb.map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+    }
+
+    function hexToRgbArray(hex) {
+        return hex.match(/[A-Za-z0-9]{2}/g).map(x => parseInt(x, 16));
+    }
+
+    async function syncBuddy() {
+        if (buddyMac == "") {
+            alert("Please wait for the page to load completely");
+            return;
+        }
+
+        const color = hexToRgbArray(buddyColor.value);
+        const message = buddyMessage.value;
+
+        buddySync.ariaBusy = "true"
+
+        const res = await fetch(`/state`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                color,
+                message,
+                mac: buddyMac,
+                tap: false
+            })
+        });
+
+        if (res.status == 200) {
+            location.reload();
+        } else {
+            alert('Something went wrong!');
+        }
+
+        buddySync.ariaBusy = "false"
+    }
+
+    async function updateYou() {
+        if (yourMessage == "") {
+            alert("Please wait for the page to load completely");
+            return;
+        }
+
+        youSync.ariaBusy = "true"
+
+        const res = await fetch(`/state`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                color: hexToRgbArray(youColor.value),
+                mac,
+                tap: false,
+                message: yourMessage
+            })
+        });
+
+        if (res.status == 200) {
+            location.reload();
+        } else {
+            alert('Something went wrong!');
+        }
+
+        youSync.ariaBusy = "false"
+    }
+
+    async function nudgeBuddy() {
+        buddyNudge.ariaBusy = "true"
+
+        const res = await fetch('/tap', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                mac
+            })
+        })
+
+        if (res.status != 200) {
+            alert('Something went wrong!');
+        }
+
+        buddyNudge.ariaBusy = "false"
+    }
+
+    buddySync.addEventListener('click', syncBuddy);
+    youSync.addEventListener('click', updateYou);
+    buddyNudge.addEventListener('click', nudgeBuddy);
+</script>
+
+</html>

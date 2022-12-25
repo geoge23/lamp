@@ -22,7 +22,7 @@ WiFiClient wifiClient;
 HTTPClient http;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
-String rootUrl = "http://192.168.86.100:3000";
+String rootUrl = "http://lamp.geoge.co";
 
 int lastServerCheck = 0;
 String mac = WiFi.macAddress();
